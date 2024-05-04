@@ -23,6 +23,17 @@ void rb_tree_init() {
   initlock(&cfs_tree.rb_lock, "rb_lock");
 }
 
+// Replaces one subtree with another
+static void rb_transplant(struct rb_tree *rb, struct rb_node *u, struct rb_node *v) {
+  if (u->p == rb->NIL)
+    rb->root = v;
+  else if (u == u->p->l)
+    u->p->l = v;
+  else
+    u->p->r = v;
+  v->p = u->p;
+}
+
 // Left rotation of the passed node in given rb tree
 static void left_rotate(struct rb_tree *rb, struct rb_node *node) {
   struct rb_node *right = node->r;
@@ -99,6 +110,65 @@ static void fixup_insert(struct rb_tree *rb, struct rb_node *node) {
   rb->root->col = BLACK;
 }
 
+// Fixes violations caused by deletion in rb tree
+static void fixup_delete(struct rb_tree *rb, struct rb_node *node) {
+  while (node != rb->root && node->col == BLACK) {
+    if (node == node->p->l) {
+      struct rb_node *sib = node->p->r;
+      if (sib->col == RED) {
+        sib->col = BLACK;
+        node->p->col = RED;
+        left_rotate(rb, node->p);
+        sib = node->p->r;
+      }
+      if (sib->l->col == BLACK && sib->r->col == BLACK) {
+        sib->col = RED;
+        node = node->p;
+      } else {
+        if (sib->r->col == BLACK) {
+          sib->l->col = BLACK;
+          sib->col = RED;
+          right_rotate(rb, sib);
+          node = rb->root;
+        }
+      }
+    } else {
+      struct rb_node *sib = node->p->l;
+      if (sib->col == RED) {
+        sib->col = BLACK;
+        node->p->col = RED;
+        right_rotate(rb, node->p);
+        sib = node->p->l;
+      }
+      if (sib->r->col == BLACK && sib->l->col == BLACK) {
+        sib->col = RED;
+        node = node->p;
+      } else {
+        if (sib->l->col == BLACK) {
+          sib->r->col = BLACK;
+          sib->col = RED;
+          left_rotate(rb, sib);
+          sib = node->p->l;
+        }
+        sib->col = node->p->col;
+        node->p->col = BLACK;
+        sib->l->col = BLACK;
+        right_rotate(rb, node->p);
+        node = rb->root;
+      }
+    }
+  }
+  node->col = BLACK;
+  cfs_tree.min_vruntime = leftmost(&cfs_tree, cfs_tree.root)->vruntime;
+}
+
+// Finds the leftmost node starting from given node
+struct rb_node *leftmost(struct rb_tree *rb, struct rb_node *node) {
+  while (node != 0 && node != rb->NIL && node->l != rb->NIL)
+    node = node->l;
+  return node;
+}
+
 // Inserts node for a process into the rb tree
 void insert_proc(struct rb_tree *rb, struct rb_node *node) {
   struct rb_node *par = rb->NIL;
@@ -129,4 +199,37 @@ void insert_proc(struct rb_tree *rb, struct rb_node *node) {
 
   fixup_insert(rb, node);
   rb->nproc++;
+}
+
+// Deletes node for a process in the rb tree
+void delete_proc(struct rb_tree *rb, struct rb_node *node) {
+  struct rb_node *temp = node;
+  struct rb_node *child;
+  enum color temp_orig_col = temp->col;
+
+  if (node->l == rb->NIL) {
+    child = node->r;
+    rb_transplant(rb, node, node->r);
+  } else if (node->r == rb->NIL){
+    child = node->l;
+    rb_transplant(rb, node, node->l);
+  } else {
+    temp = leftmost(rb, node->r);
+    temp_orig_col = temp->col;
+    child = temp->r;
+    if (temp->p == node)
+      child->p = node;
+    else {
+      rb_transplant(rb, temp, temp->r);
+      temp->r = node->r;
+      temp->r->p = temp;
+    }
+    rb_transplant(rb, node, temp);
+    temp->l = node->l;
+    temp->l->p = temp;
+    temp->col = node->col;
+  }
+  if (temp_orig_col == BLACK)
+    fixup_delete(rb, child);
+  rb->nproc--;
 }

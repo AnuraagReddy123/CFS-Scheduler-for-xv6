@@ -35,5 +35,8 @@ extern struct rb_tree cfs_tree;
 extern struct rb_node nil_node;
 
 void rb_tree_init();
+struct rb_node *leftmost(struct rb_tree *rb, struct rb_node *node);
+void insert_proc(struct rb_tree *rb, struct rb_node *node);
+void delete_proc(struct rb_tree *rb, struct rb_node *node);
 
 #endif
