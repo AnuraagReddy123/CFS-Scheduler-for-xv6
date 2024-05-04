@@ -1,4 +1,5 @@
 // Saved registers for kernel context switches.
+#include "rbtree.h"
 struct context {
   uint64 ra;
   uint64 sp;
@@ -94,6 +95,7 @@ struct proc {
 
   // wait_lock must be held when using this:
   struct proc *parent;         // Parent process
+  struct rb_node node;         // Used for rb tree scheduler
 
   // these are private to the process, so p->lock need not be held.
   uint64 kstack;               // Virtual address of kernel stack
