@@ -233,3 +233,23 @@ void delete_proc(struct rb_tree *rb, struct rb_node *node) {
     fixup_delete(rb, child);
   rb->nproc--;
 }
+
+// Debugging: Print tree
+void printtree(struct rb_tree*rb, struct rb_node *node) {
+  static char *states[] = {
+  [UNUSED]    "unused",
+  [USED]      "used",
+  [SLEEPING]  "sleep ",
+  [RUNNABLE]  "runble",
+  [RUNNING]   "run   ",
+  [ZOMBIE]    "zombie"
+  };
+
+  if (node == rb->NIL) {
+    return;
+  }
+  printtree(rb, node->l);
+  struct proc *p = container_of(node, struct proc, node);
+  printf("%d %s %s\n", p->pid, states[p->state], p->name);
+  printtree(rb, node->r);
+}

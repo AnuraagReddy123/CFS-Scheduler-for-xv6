@@ -675,6 +675,9 @@ procdump(void)
   struct proc *p;
   char *state;
 
+  acquire(&cfs_tree.rb_lock);
+  printtree(&cfs_tree, cfs_tree.root);
+  release(&cfs_tree.rb_lock);
   printf("\n");
   for(p = proc; p < &proc[NPROC]; p++){
     if(p->state == UNUSED)
