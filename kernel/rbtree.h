@@ -35,7 +35,5 @@ extern struct rb_tree cfs_tree;
 extern struct rb_node nil_node;
 
 void rb_tree_init();
-void left_rotate(struct rb_tree *rb, struct rb_node *node);
-void right_rotate(struct rb_tree *rb, struct rb_node *node);
 
 #endif
