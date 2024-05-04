@@ -170,6 +170,15 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+  // For rb node
+  acquire(&cfs_tree.rb_lock);
+  p->node = *cfs_tree.NIL;
+  p->node.vruntime = cfs_tree.min_vruntime;
+  release(&cfs_tree.rb_lock);
+  p->node.prev_vruntime = p->node.vruntime;
+  p->node.starttime = 0;
+  p->node.timeslice = 0;
+  p->node.nice = 0;
 }
 
 // Create a user page table for a given process, with no user memory,
