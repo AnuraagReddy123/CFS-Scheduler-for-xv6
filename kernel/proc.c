@@ -251,6 +251,8 @@ userinit(void)
   p->cwd = namei("/");
 
   p->state = RUNNABLE;
+  // Initialize red black tree
+  rb_tree_init();
 
   release(&p->lock);
 }
