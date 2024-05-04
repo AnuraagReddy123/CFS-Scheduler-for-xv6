@@ -253,6 +253,9 @@ userinit(void)
   p->state = RUNNABLE;
   // Initialize red black tree
   rb_tree_init();
+  acquire(&cfs_tree.rb_lock);
+  insert_proc(&cfs_tree, &p->node);
+  release(&cfs_tree.rb_lock);
 
   release(&p->lock);
 }
