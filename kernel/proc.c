@@ -526,6 +526,11 @@ yield(void)
   struct proc *p = myproc();
   acquire(&p->lock);
   p->state = RUNNABLE;
+  // p->node.prev_vruntime = p->node.vruntime;
+  // acquire(&cfs_tree.rb_lock);
+  // p->node.col = RED;
+  // insert_proc(&cfs_tree, &p->node);
+  // release(&cfs_tree.rb_lock);
   sched();
   release(&p->lock);
 }
@@ -571,6 +576,7 @@ sleep(void *chan, struct spinlock *lk)
   // Go to sleep.
   p->chan = chan;
   p->state = SLEEPING;
+  // p->node.vruntime += (ticks - p->node.starttime) * 1024/ sched_nice_to_weight[p->node.nice + 20];
 
   sched();
 
@@ -594,6 +600,10 @@ wakeup(void *chan)
       acquire(&p->lock);
       if(p->state == SLEEPING && p->chan == chan) {
         p->state = RUNNABLE;
+        // acquire(&cfs_tree.rb_lock);
+        // p->node.col = RED;
+        // insert(&cfs_tree, &p->node);
+        // release(&cfs_tree.rb_lock);
       }
       release(&p->lock);
     }
@@ -615,6 +625,10 @@ kill(int pid)
       if(p->state == SLEEPING){
         // Wake process from sleep().
         p->state = RUNNABLE;
+        // acquire(&cfs_tree.rb_lock);
+        // p->node.col = RED;
+        // insert(&cfs_tree, &p->node);
+        // release(&cfs_tree.rb_lock);
       }
       release(&p->lock);
       return 0;
