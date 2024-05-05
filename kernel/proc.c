@@ -27,6 +27,52 @@ extern char trampoline[]; // trampoline.S
 // must be acquired before any p->lock.
 struct spinlock wait_lock;
 
+// Stores the current timeslice for scheduler
+uint64 sched_period;
+
+int sched_nice_to_weight[40] = {
+    /* -20 */ 88761,
+    71755,
+    56483,
+    46273,
+    36291,
+    /* -15 */ 29154,
+    23254,
+    18705,
+    14949,
+    11916,
+    /* -10 */ 9548,
+    7620,
+    6100,
+    4904,
+    3906,
+    /*  -5 */ 3121,
+    2501,
+    1991,
+    1586,
+    1277,
+    /*   0 */ 1024,
+    820,
+    655,
+    526,
+    423,
+    /*   5 */ 335,
+    272,
+    215,
+    172,
+    137,
+    /*  10 */ 110,
+    87,
+    70,
+    56,
+    45,
+    /*  15 */ 36,
+    29,
+    23,
+    18,
+    15,
+};
+
 // Allocate a page for each process's kernel stack.
 // Map it high in memory, followed by an invalid
 // guard page.
@@ -473,7 +519,36 @@ scheduler(void)
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
 
-    for(p = proc; p < &proc[NPROC]; p++) {
+    struct rb_node *tmp = leftmost(&cfs_tree, cfs_tree.root);
+    struct proc* tmp_proc = container_of(tmp, struct proc, node);
+
+    acquire(&proc->lock);
+    if (tmp != cfs_tree.NIL)
+      p = tmp_proc;
+    else {
+      release(&proc->lock);
+      continue;
+    }
+    release(&proc->lock);
+    acquire(&p->lock);
+    if (p->state == RUNNABLE && &p->node != cfs_tree.NIL) {
+      if (cfs_tree.nproc > SCHED_LATENCY/SCHED_MIN_GRAN) {
+        sched_period = SCHED_MIN_GRAN * cfs_tree.nproc;
+      } else {
+        sched_period = SCHED_LATENCY;
+      }
+      p->node.timeslice = sched_period / cfs_tree.nproc;
+      p->state = RUNNING;
+      c->proc = p;
+      acquire(&cfs_tree.rb_lock);
+      delete_proc(&cfs_tree, &p->node);
+      release(&cfs_tree.rb_lock);
+      p->node.starttime = ticks;
+      swtch(&c->context, &p->context);
+      c->proc = 0;
+    }
+    release(&p->lock);
+    /* for(p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
       if(p->state == RUNNABLE) {
         // Switch to chosen process.  It is the process's job
@@ -488,7 +563,7 @@ scheduler(void)
         c->proc = 0;
       }
       release(&p->lock);
-    }
+    } */
   }
 }
 
@@ -526,11 +601,11 @@ yield(void)
   struct proc *p = myproc();
   acquire(&p->lock);
   p->state = RUNNABLE;
-  // p->node.prev_vruntime = p->node.vruntime;
-  // acquire(&cfs_tree.rb_lock);
-  // p->node.col = RED;
-  // insert_proc(&cfs_tree, &p->node);
-  // release(&cfs_tree.rb_lock);
+  p->node.prev_vruntime = p->node.vruntime;
+  acquire(&cfs_tree.rb_lock);
+  p->node.col = RED;
+  insert_proc(&cfs_tree, &p->node);
+  release(&cfs_tree.rb_lock);
   sched();
   release(&p->lock);
 }
@@ -576,7 +651,7 @@ sleep(void *chan, struct spinlock *lk)
   // Go to sleep.
   p->chan = chan;
   p->state = SLEEPING;
-  // p->node.vruntime += (ticks - p->node.starttime) * 1024/ sched_nice_to_weight[p->node.nice + 20];
+  p->node.vruntime += (ticks - p->node.starttime) * 1024/ sched_nice_to_weight[p->node.nice + 20];
 
   sched();
 
@@ -600,10 +675,10 @@ wakeup(void *chan)
       acquire(&p->lock);
       if(p->state == SLEEPING && p->chan == chan) {
         p->state = RUNNABLE;
-        // acquire(&cfs_tree.rb_lock);
-        // p->node.col = RED;
-        // insert(&cfs_tree, &p->node);
-        // release(&cfs_tree.rb_lock);
+        acquire(&cfs_tree.rb_lock);
+        p->node.col = RED;
+        insert_proc(&cfs_tree, &p->node);
+        release(&cfs_tree.rb_lock);
       }
       release(&p->lock);
     }
@@ -625,10 +700,10 @@ kill(int pid)
       if(p->state == SLEEPING){
         // Wake process from sleep().
         p->state = RUNNABLE;
-        // acquire(&cfs_tree.rb_lock);
-        // p->node.col = RED;
-        // insert(&cfs_tree, &p->node);
-        // release(&cfs_tree.rb_lock);
+        acquire(&cfs_tree.rb_lock);
+        p->node.col = RED;
+        insert_proc(&cfs_tree, &p->node);
+        release(&cfs_tree.rb_lock);
       }
       release(&p->lock);
       return 0;
