@@ -11,3 +11,7 @@
 #define NBUF         (MAXOPBLOCKS*3)  // size of disk block cache
 #define FSSIZE       2000  // size of file system in blocks
 #define MAXPATH      128   // maximum file path name
+
+// Parameters for Scheduler
+#define SCHED_MIN_GRAN     3000000    // minimum granularity for scheduler
+#define SCHED_LATENCY      24000000   // latency of the scheduler
