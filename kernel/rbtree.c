@@ -129,8 +129,13 @@ static void fixup_delete(struct rb_tree *rb, struct rb_node *node) {
           sib->l->col = BLACK;
           sib->col = RED;
           right_rotate(rb, sib);
-          node = rb->root;
+          sib = node->p->r;
         }
+        sib->col = node->p->col;
+        node->p->col = BLACK;
+        sib->r->col = BLACK;
+        left_rotate(rb, node->p);
+        node = rb->root;
       }
     } else {
       struct rb_node *sib = node->p->l;
@@ -250,7 +255,7 @@ void printtree(struct rb_tree*rb, struct rb_node *node) {
   }
   struct proc *p = container_of(node, struct proc, node);
   printf("%d %s %s\n", p->pid, states[p->state], p->name);
-  printf("node: a: %p, l: %p, r: %p, p: %p\n", (void *)node, (void *)node->l, (void *)node->r, (void *)node->p);
+  printf("node: a: %p, l: %p, r: %p, p: %p c:%d\n", (void *)node, (void *)node->l, (void *)node->r, (void *)node->p, node->col);
   printtree(rb, node->l);
   printtree(rb, node->r);
 }
