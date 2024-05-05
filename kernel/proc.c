@@ -218,8 +218,8 @@ freeproc(struct proc *p)
   p->state = UNUSED;
   // For rb node
   acquire(&cfs_tree.rb_lock);
-  delete_proc(&cfs_tree, &p->node);
-  p->node = *cfs_tree.NIL;
+  // delete_proc(&cfs_tree, &p->node);
+  // p->node = *cfs_tree.NIL;
   p->node.vruntime = cfs_tree.min_vruntime;
   release(&cfs_tree.rb_lock);
   p->node.prev_vruntime = p->node.vruntime;
@@ -608,6 +608,18 @@ yield(void)
   release(&cfs_tree.rb_lock);
   sched();
   release(&p->lock);
+}
+
+// Checks timeslice
+void checktimeslice(void)
+{
+  struct proc *p = myproc();
+  acquire(&p->lock);
+  p->node.vruntime += (ticks - p->node.starttime) * 1024 / sched_nice_to_weight[p->node.nice + 20];
+  release(&p->lock);
+  if (p->node.timeslice < p->node.vruntime - p->node.prev_vruntime) {
+    yield();
+  }
 }
 
 // A fork child's very first scheduling by scheduler()

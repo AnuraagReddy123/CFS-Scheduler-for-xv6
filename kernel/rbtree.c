@@ -255,7 +255,7 @@ void printtree(struct rb_tree*rb, struct rb_node *node) {
   }
   struct proc *p = container_of(node, struct proc, node);
   printf("%d %s %s\n", p->pid, states[p->state], p->name);
-  printf("node: a: %p, l: %p, r: %p, p: %p c:%d\n", (void *)node, (void *)node->l, (void *)node->r, (void *)node->p, node->col);
+  // printf("node: a: %p, l: %p, r: %p, p: %p c:%d\n", (void *)node, (void *)node->l, (void *)node->r, (void *)node->p, node->col);
   printtree(rb, node->l);
   printtree(rb, node->r);
 }
