@@ -172,6 +172,11 @@ freeproc(struct proc *p)
   p->state = UNUSED;
   // For rb node
   acquire(&cfs_tree.rb_lock);
+  if (p->node.p->r == &p->node) {
+    p->node.p->r = cfs_tree.NIL;
+  } else {
+    p->node.p->l = cfs_tree.NIL;
+  }
   p->node = *cfs_tree.NIL;
   p->node.vruntime = cfs_tree.min_vruntime;
   release(&cfs_tree.rb_lock);
@@ -335,6 +340,9 @@ fork(void)
 
   acquire(&np->lock);
   np->state = RUNNABLE;
+  acquire(&cfs_tree.rb_lock);
+  insert_proc(&cfs_tree, &np->node);
+  release(&cfs_tree.rb_lock);
   release(&np->lock);
 
   return pid;

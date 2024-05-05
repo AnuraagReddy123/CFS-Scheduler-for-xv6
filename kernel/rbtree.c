@@ -248,8 +248,9 @@ void printtree(struct rb_tree*rb, struct rb_node *node) {
   if (node == rb->NIL) {
     return;
   }
-  printtree(rb, node->l);
   struct proc *p = container_of(node, struct proc, node);
   printf("%d %s %s\n", p->pid, states[p->state], p->name);
+  printf("node: a: %p, l: %p, r: %p, p: %p\n", (void *)node, (void *)node->l, (void *)node->r, (void *)node->p);
+  printtree(rb, node->l);
   printtree(rb, node->r);
 }
