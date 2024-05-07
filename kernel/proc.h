@@ -96,6 +96,12 @@ struct proc {
   // wait_lock must be held when using this:
   struct proc *parent;         // Parent process
   struct rb_node node;         // Used for rb tree scheduler
+  uint start_ticks;  // Tick count when the process starts running
+  uint end_ticks;    // Tick count when the process stops running
+  uint run_time;               // How long the process has run
+  uint exit_time;              // When the process exited
+  uint wait_time;               // How long the process has run
+  uint sleep_time;             // How long the process has been sleeping
 
   // these are private to the process, so p->lock need not be held.
   uint64 kstack;               // Virtual address of kernel stack
